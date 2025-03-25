@@ -46,7 +46,7 @@ class Flow(FlowSpec):
     @needs(predecessors=[merge, stats])
     @step
     def finish(merge, stats):
-        return {"merge": [r[0].dict() for r in merge], "stats": stats}
+        return {"merge": [r[0].i_dont_exist() for r in merge], "stats": stats}
 
 def main():
     secrets = json.load(Path("key.json").open())
