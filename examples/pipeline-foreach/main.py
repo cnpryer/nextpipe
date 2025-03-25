@@ -1,5 +1,7 @@
 import copy
 import json
+import os
+from pathlib import Path
 
 import nextmv
 import nextmv.cloud
@@ -25,7 +27,7 @@ class Flow(FlowSpec):
         """
         return {"stats": {"count": len(json.dumps(data))}}
 
-    @app(app_id="echo")
+    @app(app_id="echo", full_result=True)
     @needs(predecessors=[fanout])
     @step
     def solve():
@@ -34,15 +36,22 @@ class Flow(FlowSpec):
         """
         pass
 
-    @needs(predecessors=[solve, stats])
+    @needs(predecessors=[solve])
     @join()  # Collect the results from the previous 'foreach' step and combine them into a list passed as the arg
     @step
     def merge(results: list):
         """Merges the results."""
         return results
 
+    @needs(predecessors=[merge, stats])
+    @step
+    def finish(merge, stats):
+        return {"merge": [r[0].dict() for r in merge], "stats": stats}
 
 def main():
+    secrets = json.load(Path("key.json").open())
+    os.environ["NEXTMV_API_KEY"] = secrets["nextmv_api_key"]
+
     # Load input data
     input = nextmv.load_local()
 
@@ -51,7 +60,7 @@ def main():
     flow.run()
 
     # Write out the result
-    print(json.dumps(flow.get_result(flow.merge)))
+    print(json.dumps(flow.get_result(flow.finish)))
 
 
 if __name__ == "__main__":
